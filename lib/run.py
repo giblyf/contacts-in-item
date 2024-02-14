@@ -6,6 +6,7 @@ from typing import Tuple
 
 import pandas as pd
 from model import task1, task2
+from typing import Tuple, Union
 
 
 class Test:
@@ -22,6 +23,7 @@ class Test:
         self.test_data_dir = os.getenv('TEST_DATA_ROOT')
         self.user = os.getenv('USER')
 
+
     def _get_logger(self):
         logger = logging.getLogger()
         handler = logging.StreamHandler(sys.stdout)
@@ -30,6 +32,7 @@ class Test:
         logger.setLevel(logging.INFO)
 
         return logger
+
 
     def _check(
         self, test: pd.DataFrame, task1_prediction: pd.DataFrame, task2_prediction: pd.DataFrame,
@@ -84,11 +87,12 @@ class Test:
             error = 'В ответах к задаче 2 `finish` должен быть None или индексом символа в `description`'
             raise ValueError(error)
 
+
     def train(self) -> pd.DataFrame:
         path = os.path.join(self.data_dir, self.train_csv)
         if not os.path.exists(path):
             self.logger.info(f'Файл {path} не найден')
-            path = os.path.join(self.test_data_dir, self.train_csv)
+            path = os.path.join(self.data_dir, self.train_csv)
         if not os.path.exists(path):
             self.logger.info(f'Файл {path} не найден')
             raise ValueError('train не найден')
@@ -96,8 +100,10 @@ class Test:
 
         return df
 
+
     def val(self) -> pd.DataFrame:
         path = os.path.join(self.data_dir, self.val_csv)
+
         if not os.path.exists(path):
             self.logger.info(f'Файл {path} не найден')
             path = os.path.join(self.test_data_dir, self.val_csv)
@@ -127,8 +133,8 @@ class Test:
         self.logger.info('Проверка ответов')
         self._check(self.test(), task1_prediction, task2_prediction)
 
-        task1_path = os.path.join(self.test_data_dir, f'{self.user}_{self.task1_prediction}')
-        task2_path = os.path.join(self.test_data_dir, f'{self.user}_{self.task2_prediction}')
+        task1_path = os.path.join(self.data_dir, f'{self.user}_{self.task1_prediction}')
+        task2_path = os.path.join(self.data_dir, f'{self.user}_{self.task2_prediction}')
         self.logger.info(f'Сохранение результатов {task1_path}')
         task1_prediction.to_csv(task1_path, index=False)
         self.logger.info(f'Сохранение результатов {task2_path}')
@@ -136,12 +142,15 @@ class Test:
 
         self.logger.info('Готово')
 
+
     def process(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         test = self.test()
+        val = self.val()
+        train = self.train()
 
         task1_prediction = pd.DataFrame(columns=['index', 'prediction'])
         task1_prediction['index'] = test.index
-        task1_prediction['prediction'] = test['title'].apply(task1)
+        task1_prediction['prediction'] = task1(train, val, test)
 
         task2_prediction = pd.DataFrame(columns=['index', 'start', 'finish'])
         task2_prediction['index'] = test.index
